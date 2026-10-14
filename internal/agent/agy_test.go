@@ -95,7 +95,7 @@ func TestAgy(t *testing.T) {
 	}
 	// the options: the user's own, then magpie's
 	opts := a.Field("model").Options(a.Values())
-	if len(opts) == 0 || opts[0].Value != "mine" || opts[0].Group != "Antigravity CLI" {
+	if len(opts) == 0 || opts[0].Value != "mine" || opts[0].Group != "Antigravity" {
 		t.Fatalf("options: %+v", opts)
 	}
 	// as installed: the user's model and provider back, magpie's models out

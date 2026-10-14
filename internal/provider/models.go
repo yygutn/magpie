@@ -1128,6 +1128,9 @@ var grokEffort = regexp.MustCompile(`^((?:.*/)?grok-[0-9][^/]*?)-(?:minimal|low|
 // same model, at the same price (#224). Codex Auto Review uses GPT-5.6 Luna
 // according to OpenAI's rate card (2026-09-30):
 // https://help.openai.com/en/articles/11481834-chatgpt-rate-card-business-enterpriseedu-credit-based-pricing
+// Google's Code Assist backend reports Gemini deployment ids with a trailing
+// "-n" (gemini-3.8-flash-n), an id the catalog does not list; price it as
+// the family id without the suffix (b2432754).
 // This is a list-price estimate, not evidence of a response's served model.
 // Other names without catalog prices stay unpriced (grok-4.7-build, grok-4.7-mini,
 // grok-4.7-fast).
@@ -1135,6 +1138,9 @@ func pricedNames(model string) []string {
 	out := []string{model}
 	if model == "codex-auto-review" {
 		out = append(out, "gpt-5.6-luna")
+	}
+	if base, ok := strings.CutSuffix(model, "-n"); ok && strings.HasPrefix(base, "gemini") {
+		out = append(out, base)
 	}
 	if m := grokEffort.FindStringSubmatch(strings.ToLower(strings.TrimSpace(model))); m != nil {
 		out = append(out, m[1])

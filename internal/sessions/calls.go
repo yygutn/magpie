@@ -210,14 +210,17 @@ func callFiles() []file {
 // rather than line by line: OpenCode's (#680) and ZCode's, whose calls are
 // rows of their database or their JSON files; DeepSeek Harness's, whose
 // session file is packed in frames and so cannot be read on from the middle
-// of one; and WorkBuddy's, whose usage lines repeat a reply's id as it goes
-// on. Every agent here needs an entry in wholeCallReaders.
+// of one; WorkBuddy's, whose usage lines repeat a reply's id as it goes
+// on; and Antigravity's, whose calls are rows of a SQLite database read
+// whole. Every agent here needs an entry in wholeCallReaders, and every
+// agent in callFiles must not have one.
 func callSources() []file {
 	out := callFiles()
 	out = append(out, openCodeCallFiles()...)
 	out = append(out, zcodeCallFiles()...)
 	out = append(out, dshCallFiles()...)
-	return append(out, workbuddyCallFiles()...)
+	out = append(out, workbuddyCallFiles()...)
+	return append(out, antigravityCallFiles()...)
 }
 
 // desktopDataDirs are Claude Desktop's folders on this computer that

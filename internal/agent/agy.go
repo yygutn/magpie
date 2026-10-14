@@ -98,7 +98,7 @@ func agy(home string) *Agent {
 		return edit.SetJSON(path, edit.KV{Path: key, Value: v})
 	}
 	return &Agent{
-		ID: "agy", Name: "Antigravity CLI", Icon: "antigravity-color", Aliases: []string{"antigravity-cli"}, Spelled: prefixed,
+		ID: "agy", Name: "Antigravity", Icon: "antigravity-color", Aliases: []string{"antigravity-cli", "antigravity"}, Spelled: prefixed,
 		Bin: "agy", Dir: dir, Path: path,
 		Launch: func() string {
 			if v := get(); usesMagpie(v) {
@@ -125,10 +125,10 @@ func agy(home string) *Agent {
 				return ""
 			}
 			if _, ok := agyCustom(path)[v]; !ok {
-				return "Antigravity CLI's custom model " + v + " (settings.json) is gone, so it no longer reaches magpie"
+				return "Antigravity's custom model " + v + " (settings.json) is gone, so it no longer reaches magpie"
 			}
 			if p := provider(); p != "gemini" {
-				return "Antigravity CLI's modelProvider (settings.json) is " + orDefault(p) + ", not gemini, so it asks Google directly"
+				return "Antigravity's modelProvider (settings.json) is " + orDefault(p) + ", not gemini, so it asks Google directly"
 			}
 			return ""
 		},
@@ -182,7 +182,7 @@ func agy(home string) *Agent {
 				if c := cur["model"]; c != "" && !usesMagpie(c) && custom[c] == nil {
 					own = append([]Option{{Value: c, Icon: modelIcon("", c), Direct: "Google"}}, own...)
 				}
-				return append(group("Antigravity CLI", own), viaMagpie("agy", magpieID+"/")...)
+				return append(group("Antigravity", own), viaMagpie("agy", magpieID+"/")...)
 			},
 		}},
 	}

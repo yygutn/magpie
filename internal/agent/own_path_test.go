@@ -80,11 +80,11 @@ func TestOwnModelsSayTheirPath(t *testing.T) {
 		t.Errorf("Grok's own table: %+v", o)
 	}
 
-	// Antigravity CLI
+	// Antigravity
 	ag := filepath.Join(home, ".gemini", "antigravity-cli")
 	os.MkdirAll(ag, 0o755)
 	os.WriteFile(filepath.Join(ag, "settings.json"), []byte(`{"customModelsConfig":{"customModels":{"mine":{"apiProvider":"API_PROVIDER_ANTHROPIC","modelName":"claude-x"}}}}`), 0o644)
-	if o := ownOf(agy(home), "Antigravity CLI"); len(o) != 1 || o[0].Direct != "Anthropic" {
+	if o := ownOf(agy(home), "Antigravity"); len(o) != 1 || o[0].Direct != "Anthropic" {
 		t.Errorf("agy's own: %+v", o)
 	}
 

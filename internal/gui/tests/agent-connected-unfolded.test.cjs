@@ -25,7 +25,7 @@ const agent = (id, name, { wired = false, value = "" } = {}) => ({
 });
 const AGENTS = [
   agent("claude", "Claude Code", { wired: true, value: "sub/gpt-6.1-sol" }),
-  agent("agy", "Antigravity CLI", { value: "gemini-3.5-pro" }), // its own model, not connected
+  agent("agy", "Antigravity", { value: "gemini-3.5-pro" }), // its own model, not connected
   agent("dsh", "DeepSeek Harness", { value: "deepseek-v4" }), // likewise
   agent("opencode", "OpenCode", { wired: true, value: "sub/opus-5.5" }),
   agent("codex", "Codex", { wired: true, value: "" }), // connected, on its last choice

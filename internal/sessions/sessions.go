@@ -94,7 +94,7 @@ type Model struct {
 // Session is one agent session.
 type Session struct {
 	ReadOnly bool      `json:"read_only,omitempty"`
-	Agent    string    `json:"agent"` // magpie agent id: claude, codex, opencode, pi, omp, zcode, dsh, cline, qoder, qoder-cn, grok, workbuddy, droid, cursor, hermes, alma
+	Agent    string    `json:"agent"` // magpie agent id: claude, codex, opencode, pi, omp, zcode, dsh, cline, qoder, qoder-cn, grok, workbuddy, droid, cursor, hermes, alma, agy
 	ID       string    `json:"id"`
 	Cwd      string    `json:"cwd"`
 	Title    string    `json:"title"` // the name it was given, else the agent's own title, else the first prompt
@@ -345,7 +345,10 @@ type file struct {
 	manifest string
 	hermes   *hermesDB
 	// Alma: its database, and what tells the chat's rows changed
-	alma     *almaStore
+	alma *almaStore
+	// agy (Antigravity): the conversation's own SQLite database, kept
+	// open while a listing reads it (agyFiles)
+	agy      *agyStore
 	rev      string
 	readOnly bool
 	// wsl: the WSL distro whose home it is in; cold: that distro isn't
@@ -439,7 +442,7 @@ func allFiles() []file {
 	var out []file
 	for _, fs := range [][]file{callFiles(), openCodeFiles(), piFiles(),
 		wslFiles("pi"), zcodeFiles(), dshFiles(), clineFiles(), ccFiles("qoder", QoderDir("qoder")), ccFiles("qoder-cn", QoderDir("qoder-cn")),
-		grokFiles(), workbuddyFiles(), droidFiles(), ompFiles(), cursorFiles(), hermesFiles(), almaFiles()} {
+		grokFiles(), workbuddyFiles(), droidFiles(), ompFiles(), cursorFiles(), hermesFiles(), almaFiles(), agyFiles()} {
 		out = append(out, fs...)
 	}
 	return out
@@ -463,6 +466,7 @@ func Dirs() []string {
 		{FactoryDir(), filepath.Join(FactoryDir(), "sessions")},
 		{CursorDir(), filepath.Join(CursorDir(), "chats")},
 		{AlmaDir(), almaDB()},
+		{AntigravityDir(), agyConversationsDir()},
 	} {
 		if _, err := os.Stat(d.sessions); err == nil {
 			out = append(out, d.dir)
@@ -1042,6 +1046,8 @@ func parserFor(agent string) sessionParser {
 		return sessionParser{whole: parseDroid}
 	case "cursor":
 		return sessionParser{whole: parseCursor}
+	case "agy":
+		return sessionParser{whole: parseAntigravity}
 	case "codex":
 		return sessionParser{line: codexBody}
 	case "pi", "omp":

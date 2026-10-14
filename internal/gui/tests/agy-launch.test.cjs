@@ -20,7 +20,7 @@ const agent = (id, name, launch) => ({
 });
 const state = {
   agents: [agent("claude", "Claude Code"), ...Array.from({ length: 4 }, (_, i) => agent("agent-" + i, "agent-" + i)),
-    agent("agy", "Antigravity CLI", LAUNCH), ...Array.from({ length: 8 }, (_, i) => agent("more-" + i, "more-" + i))],
+    agent("agy", "Antigravity", LAUNCH), ...Array.from({ length: 8 }, (_, i) => agent("more-" + i, "more-" + i))],
   profiles: [],
 };
 

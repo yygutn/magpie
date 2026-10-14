@@ -635,6 +635,58 @@ func matchedBlocks(gateways []*rowChunk, chunks []*rowChunk, skip map[rowRef]boo
 			matched[ref], used[byID[id][j]] = true, true
 		}
 	}
+	// A second pass pairs by response id: the id the vendor answered with,
+	// which a call through magpie and the same call read from a session file
+	// both carry. Antigravity's local store records it (gemini's responseId)
+	// and the gateway keeps it, while an agy session names no session for
+	// the fallback to use, so this is the only id the two can meet on.
+	byRespID := map[string][]rowRef{}
+	for _, gateway := range gateways {
+		for i, p := range gateway.Rows {
+			if used[rowRef{gateway, i}] || (p.Flags&4 != 0 || p.Text[1] == 0 && p.Status >= 400) || p.Time.Before(gatewaySince) {
+				continue
+			}
+			if id := gateway.Strings[p.Text[25]]; id != "" {
+				byRespID[id] = append(byRespID[id], rowRef{gateway, i})
+			}
+		}
+	}
+	if len(byRespID) > 0 {
+		byResp := map[string][]rowRef{}
+		for _, c := range chunks {
+			for i, p := range c.Rows {
+				ref := rowRef{c, i}
+				if skip[ref] || matched[ref] || p.Time.Before(since) {
+					continue
+				}
+				if id := c.Strings[p.Text[25]]; id != "" && len(byRespID[id]) > 0 {
+					byResp[id] = append(byResp[id], ref)
+				}
+			}
+		}
+		for id, refs := range byResp {
+			if newestIDs {
+				slices.SortFunc(refs, func(a, b rowRef) int {
+					if refNewer(a, b) {
+						return -1
+					}
+					if refNewer(b, a) {
+						return 1
+					}
+					return 0
+				})
+			}
+			for j, ref := range refs {
+				if j >= len(byRespID[id]) {
+					break
+				}
+				if used[byRespID[id][j]] {
+					continue
+				}
+				matched[ref], used[byRespID[id][j]] = true, true
+			}
+		}
+	}
 	groups := map[matchKey]*matchGroup{}
 	for _, gateway := range gateways {
 		for i, p := range gateway.Rows {

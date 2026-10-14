@@ -293,6 +293,13 @@ func logRecord(c sessions.Call) Record {
 	if c.Agent == "codex" || c.Agent == "opencode" {
 		r.Requested, r.Served = c.Model, ""
 	}
+	// Antigravity's local store records the same response id the gateway
+	// answered with, so a call it made through magpie pairs by that id (the
+	// session fallback cannot: agy sends the gateway no session header).
+	// Kept to agy; other agents' records are left as they were.
+	if c.Agent == "agy" {
+		r.ResponseID = c.ResponseID
+	}
 	if r.Requested != "" {
 		// sent as asked, less the size of its context Claude Code names it by
 		r.Model = contextTail.ReplaceAllString(r.Requested, "")

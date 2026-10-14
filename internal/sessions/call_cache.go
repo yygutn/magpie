@@ -31,10 +31,12 @@ import (
 // v10: the calls ZCode's and WorkBuddy's session files hold are read too, and
 // WorkBuddy's that went through the gateway are left out of them as a dsh
 // one is.
+// v11: Antigravity's local SQLite usage is read too, folded by response
+// id so one model call is one call even when the store splits it over steps.
 // What each version names is what a cache of the one before it cannot serve:
 // the version is part of the directory's name, so a cache written by an older
 // one is never read (pruneCalls).
-const callCacheVersion = "calls-v10"
+const callCacheVersion = "calls-v11"
 const maxKeptCalls = 131072
 const maxKeptFiles = 64
 
@@ -175,6 +177,7 @@ var wholeCallReaders = map[string]func(file) (*callFile, bool){
 	"zcode":     readZCodeCalls,
 	"dsh":       readDshCalls,
 	"workbuddy": readWorkBuddyCalls,
+	"agy":       readAntigravityCalls,
 }
 
 func readCalls(f file) *callFile {
