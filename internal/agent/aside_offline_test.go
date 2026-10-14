@@ -42,6 +42,13 @@ func TestAsideOfflineDisconnectRestoresWithoutDaemon(t *testing.T) {
 	asideRead = func() (map[string]json.RawMessage, error) { t.Fatal("offline disconnect read daemon"); return nil, nil }
 	asideSet = func(string, string) error { t.Fatal("offline disconnect set daemon"); return nil }
 	t.Setenv("PATH", t.TempDir())
+	// no desktop app either: CLIMissing reads appFolders, which on a
+	// developer's machine points at the real /Applications, where this
+	// fixture's agent (dsh) is installed as an app — that would report the
+	// CLI present and the fixture absent
+	wasApps := appFolders
+	appFolders = func() []string { return []string{t.TempDir()} }
+	t.Cleanup(func() { appFolders = wasApps })
 	if proc.FindTool(a.Bin) != "" {
 		t.Fatal("fixture must have no Aside executable")
 	}
