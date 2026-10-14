@@ -167,6 +167,55 @@ func agySummaries(t *testing.T, rows map[string]struct{ title, uris string }) {
 	}
 }
 
+// TestAntigravityReadsOneSnapshotAcrossQueries: the App writes a generator
+// and its steps in one commit. agyRead reads the models then the steps; a
+// write committed between the two must not be half-seen — a step whose
+// generator is not in the snapshot is a missing model, which reads as an
+// unreadable conversation and drops the whole history from the page. Both
+// queries share one read transaction, so the later commit is invisible.
+func TestAntigravityReadsOneSnapshotAcrossQueries(t *testing.T) {
+	agyIsolate(t)
+	at := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	id := "eeeeeeee-1111-2222-3333-444444444444"
+	agyFixture(t, agyConv{
+		id:    id,
+		steps: map[int64][]byte{0: agyStepBytes(agyStepIn{at: at, input: 10, output: 1, responseID: "r0"})},
+		gens:  [][]byte{agyGenBytes("gemini-3.8-flash-n", 0)},
+	})
+	files := agyFiles()
+	if len(files) != 1 {
+		t.Fatalf("files = %d, want 1", len(files))
+	}
+	path := files[0].path
+
+	// The App commits a new generator and a new step mid-read.
+	was := agyBetweenQueries
+	agyBetweenQueries = func() {
+		db, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+		if _, err := db.Exec("INSERT INTO gen_metadata(idx, data) VALUES (?, ?)", 1,
+			agyGenBytes("gemini-3.8-flash-n", 1)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec("INSERT INTO steps(idx, metadata) VALUES (?, ?)", 1,
+			agyStepBytes(agyStepIn{at: at.Add(time.Second), input: 20, output: 2, responseID: "r1"})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() { agyBetweenQueries = was })
+
+	usages, _, _, err := agyRead(files[0])
+	if err != nil {
+		t.Fatalf("agyRead saw a half-written commit: %v", err)
+	}
+	if len(usages) != 1 || usages[0].tokens.Input != 10 {
+		t.Fatalf("usages = %+v, want the one snapshot's call (input 10)", usages)
+	}
+}
+
 // TestAntigravityFoldsStepsByResponse is the contract cc-bar's scanner
 // keeps: three steps whose first two share a response id are two calls, the
 // shared one taking the last step's figures. Without the fold the same

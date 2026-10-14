@@ -207,7 +207,12 @@ type agyUsage struct {
 }
 
 // agyRead reads one conversation: its model calls (one per response), its
-// title and folder.
+// title and folder. The two queries run in one read transaction: the App
+// writes generators and steps in one commit, and a read split across that
+// commit would see a step whose generator is not in the snapshot yet — a
+// missing model, which is read as an unreadable conversation and would drop
+// the whole history from the page until the next read (cc-bar's
+// withDatabase does the same BEGIN/ROLLBACK).
 func agyRead(f file) (usages []agyUsage, title, cwd string, err error) {
 	// Opened for this read alone: a whole-file parse runs on several workers
 	// at once, so it must not reach the listing's shared handle table.
@@ -219,11 +224,19 @@ func agyRead(f file) (usages []agyUsage, title, cwd string, err error) {
 	if !ocHasTable(db, "steps") || !ocHasTable(db, "gen_metadata") {
 		return nil, "", "", errAntigravityMetadata
 	}
-	models, err := agyModels(db)
+	tx, err := db.Begin()
 	if err != nil {
 		return nil, "", "", err
 	}
-	usages, err = agySteps(db, models)
+	defer tx.Rollback()
+	models, err := agyModels(tx)
+	if err != nil {
+		return nil, "", "", err
+	}
+	if agyBetweenQueries != nil {
+		agyBetweenQueries()
+	}
+	usages, err = agySteps(tx, models)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -235,8 +248,19 @@ func agyRead(f file) (usages []agyUsage, title, cwd string, err error) {
 	return usages, title, cwd, nil
 }
 
+// agyQuerier is *sql.DB or *sql.Tx: agyModels and agySteps read through one
+// so agyRead can hold a single read transaction over both.
+type agyQuerier interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+}
+
+// agyBetweenQueries runs between agyRead's two queries. nil in production;
+// a test sets it to commit a write there and prove the reads share one
+// snapshot.
+var agyBetweenQueries func()
+
 // agyModels maps each step index to the model the generator owning it named.
-func agyModels(db *sql.DB) (map[int64]string, error) {
+func agyModels(db agyQuerier) (map[int64]string, error) {
 	rows, err := db.Query("SELECT data FROM gen_metadata")
 	if err != nil {
 		return nil, err
@@ -266,7 +290,7 @@ func agyModels(db *sql.DB) (map[int64]string, error) {
 // the last of them, in the order their steps come. A step without tokens is
 // skipped; one whose model the generators do not name is an error (the
 // conversation's figures would be wrong, not merely incomplete).
-func agySteps(db *sql.DB, models map[int64]string) ([]agyUsage, error) {
+func agySteps(db agyQuerier, models map[int64]string) ([]agyUsage, error) {
 	rows, err := db.Query("SELECT idx, metadata FROM steps WHERE metadata IS NOT NULL ORDER BY idx")
 	if err != nil {
 		return nil, err
